@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: finguide_backend
+    ports:
+      - '5001:5001'
+    env_file:
+      - ./backend/.env
+    environment:
+      - MONGO_URI=mongodb://host.docker.internal:27017/finguide
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:alpine
+    container_name: finguide_redis
+    ports:
+      - '6379:6379'
+
+  frontend:
+    build: ./frontend
+    container_name: finguide_frontend
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
