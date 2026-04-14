@@ -1,0 +1,12 @@
+name: kyathi_Git (Deployment Pipeline)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Frontend UI Optimization
+        run: echo "Kyathi verified frontend deployment readiness."

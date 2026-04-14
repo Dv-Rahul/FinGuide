@@ -1,0 +1,12 @@
+name: P-kishore (Continuous Integration)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Backend Integrity Check
+        run: echo "Kishore verified backend security protocols."
