@@ -1,0 +1,54 @@
+name: FinGuide Master CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # STAGE 1: Build and Test on GitHub Cloud
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Verify Backend
+        run: |
+          cd backend
+          npm install
+        
+      - name: Verify Frontend Build
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Verify Docker Configuration
+        run: docker-compose config
+
+  # STAGE 2: Deploy to Production Server via SSH
+  deploy:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Execute Remote Deployment via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER || 'root' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd ~/FinanicalGuide-main/FinanicalGuide-main
+            git pull origin main
+            powershell -ExecutionPolicy Bypass -File ./deploy.ps1 -TargetEnv auto
