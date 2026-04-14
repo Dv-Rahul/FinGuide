@@ -1,29 +1,117 @@
 version: '3.8'
 
+networks:
+  blue-net:
+  green-net:
+  shared-net:
+
 services:
-  backend:
-    build: ./backend
-    container_name: finguide_backend
+  # ======== SHARED DATABASE SERVICES ========
+  mongodb:
+    image: mongo:latest
+    container_name: finguide_mongodb
     ports:
-      - '5001:5001'
-    env_file:
-      - ./backend/.env
-    environment:
-      - MONGO_URI=mongodb://host.docker.internal:27017/finguide
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - redis
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - shared-net
 
   redis:
     image: redis:alpine
     container_name: finguide_redis
-    ports:
-      - '6379:6379'
+    networks:
+      - shared-net
 
-  frontend:
+  # ======== BLUE ENVIRONMENT ========
+  backend-blue:
+    build: ./backend
+    container_name: finguide_backend_blue
+    env_file:
+      - ./backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+    networks:
+      blue-net:
+        aliases:
+          - backend
+      shared-net:
+    profiles: ["blue"]
+
+  frontend-blue:
     build: ./frontend
-    container_name: finguide_frontend
+    container_name: finguide_frontend_blue
+    networks:
+      - blue-net
+      - shared-net
+    profiles: ["blue"]
+
+  # ======== GREEN ENVIRONMENT ========
+  backend-green:
+    build: ./backend
+    container_name: finguide_backend_green
+    env_file:
+      - ./backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+    networks:
+      green-net:
+        aliases:
+          - backend
+      shared-net:
+    profiles: ["green"]
+
+  frontend-green:
+    build: ./frontend
+    container_name: finguide_frontend_green
+    networks:
+      - green-net
+      - shared-net
+    profiles: ["green"]
+
+  # ======== ROUTER (NGINX) ========
+  router:
+    image: nginx:alpine
+    container_name: finguide_router
     ports:
-      - '80:80'
-    depends_on:
-      - backend
+      - "80:80"
+      - "5001:5001"
+    volumes:
+      - ./nginx-router:/etc/nginx/router-config
+    command: ["nginx", "-g", "daemon off;", "-c", "/etc/nginx/router-config/router.conf"]
+    networks:
+      - shared-net
+
+  # ======== MONITORING SERVICES ========
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: finguide_prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - shared-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: finguide_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - shared-net
+
+volumes:
+  mongodb_data:
+  grafana_data:

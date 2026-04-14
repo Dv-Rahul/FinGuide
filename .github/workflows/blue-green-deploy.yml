@@ -1,0 +1,28 @@
+name: Blue-Green Deployment
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted # Assuming a self-hosted runner on the production server
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Run Automated Blue-Green Deployment
+        shell: powershell
+        run: |
+          ./deploy.ps1 -TargetEnv auto
+          
+      - name: Verify Deployment Success
+        if: success()
+        run: echo "Deployment to active environment completed successfully."
+
+      - name: Handle Deployment Failure
+        if: failure()
+        run: |
+          echo "Deployment failed. Rollback logic has already been executed by the framework script."
+          # Optionally send notification (Slack/Email) here
