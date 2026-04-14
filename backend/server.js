@@ -1,3 +1,4 @@
+// FinGuide AI Backend - Monitoring and Blue-Green Deployment Integrated
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
